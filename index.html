@@ -1,0 +1,460 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andromeda.h - Macro Reference</title>
+    <style>
+        /* Gruvbox Dark Theme */
+        :root {
+            --bg0: #282828;        /* Background */
+            --bg1: #3c3836;        /* Lighter Background */
+            --fg0: #fbf1c7;        /* Foreground */
+            --fg1: #ebdbb2;        /* Lighter Foreground */
+            --red: #cc241d;        /* Red */
+            --green: #98971a;      /* Green */
+            --yellow: #d79921;     /* Yellow */
+            --blue: #458588;       /* Blue */
+            --purple: #b16286;     /* Purple */
+            --aqua: #689d6a;       /* Aqua */
+            --orange: #d65d0e;     /* Orange */
+            --gray: #7c6f64;       /* Gray */
+        }
+
+        body {
+            background-color: var(--bg0);
+            color: var(--fg1);
+            font-family: 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--yellow);
+            border-bottom: 2px solid var(--gray);
+            padding-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            text-align: center;
+            color: var(--orange);
+        }
+
+        h2 {
+            font-size: 1.8em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            color: var(--aqua);
+        }
+
+        p, li {
+            color: var(--fg1);
+        }
+
+        code, pre {
+            background-color: var(--bg1);
+            color: var(--fg0);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 1.1em; /* Increased font size for code */
+        }
+
+        pre {
+            padding: 20px; /* Increased padding for code blocks */
+            overflow-x: auto;
+            border: 1px solid var(--gray);
+            margin: 10px 0;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: var(--aqua);
+            text-decoration: underline;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            padding: 5px 0;
+        }
+
+        ul li::before {
+            content: "➤ ";
+            color: var(--green);
+        }
+
+        .download-btn {
+            display: inline-block;
+            background-color: var(--blue);
+            color: var(--fg0);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .download-btn:hover {
+            background-color: var(--aqua);
+            color: var(--bg0);
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .example {
+            background-color: var(--bg1);
+            border-left: 4px solid var(--yellow);
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .note {
+            background-color: var(--bg1);
+            border-left: 4px solid var(--red);
+            padding: 10px;
+            margin: 10px 0;
+            color: var(--fg1);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--gray);
+        }
+    </style>
+</head>
+<body>
+    <h1>Andromeda.h — Macro Reference</h1>
+    <p style="text-align: center;">A domain-specific macro layer over C++ for fast prototyping of I/O, flow control, and mini-scripts.</p>
+    <a href="#" class="download-btn">⬇ Download Library</a>
+
+    <div class="section">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#include-directive">Include Directive</a></li>
+            <li><a href="#program-entry">Program Entry</a></li>
+            <li><a href="#input-output">Input / Output</a></li>
+            <li><a href="#variables">Variables</a></li>
+            <li><a href="#functions-scripts">Functions & Scripts</a></li>
+            <li><a href="#pointers-memory">Pointers & Memory</a></li>
+            <li><a href="#control-flow">Control Flow</a></li>
+            <li><a href="#loops">Loops</a></li>
+            <li><a href="#math-helpers">Math Helpers</a></li>
+            <li><a href="#logic-gates">Logic Gates</a></li>
+            <li><a href="#structs-classes-enums">Structs / Classes / Enums</a></li>
+            <li><a href="#namespaces">Namespaces</a></li>
+            <li><a href="#vectors">Vectors (int aliases)</a></li>
+            <li><a href="#flags">Flags</a></li>
+            <li><a href="#misc">Miscellaneous</a></li>
+            <li><a href="#notes-caveats">Notes & Caveats</a></li>
+        </ul>
+    </div>
+
+    <div class="section" id="include-directive">
+        <h2>1. Include Directive</h2>
+        <p>Include the Andromeda library to use its macros.</p>
+        <pre><code>#include "andromeda/include-andromeda.h"</code></pre>
+        <div class="note">
+            <p><strong>Note:</strong> Ensure the path to <code>andromeda.h</code> matches your project structure.</p>
+        </div>
+    </div>
+
+    <div class="section" id="program-entry">
+        <h2>2. Program Entry</h2>
+        <p>Aliases for <code>int main() { ... }</code>.</p>
+        <pre><code>#define MAIN(code)   int main(){code}
+#define START(code)  int main(){code}
+#define BEGIN(code)  int main(){code}
+#define PLAY(code)   int main(){code}
+#define LAUNCH(code) int main(){code}
+#define _(data)      int main(){data}</code></pre>
+        <h3>Example</h3>
+        <div class="example">
+            <pre><code>MAIN(print("Hello"))
+PLAY(print("Game Started"))</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="input-output">
+        <h2>3. Input / Output</h2>
+        <h3>Output</h3>
+        <pre><code>#define cout_start std::cout <<
+#define cout_insrt <<
+#define cout_end   << std::endl;
+#define print(x)   std::cout << x << std::endl;
+#define output(prefix, data, isEnable) \
+  if(isEnable){ std::cout << prefix; } \
+  std::cout << data << std::endl;
+#define say   std::cout << "Andromeda: Hello World!" << std::endl;
+#define ping  std::cout << "Hello World!" << std::endl;
+#define pulse std::cout << "Hello World!" << std::endl; return 1; // ends main
+#define _p    std::cout << "Hello World!" << std::endl;</code></pre>
+        <h3>Examples</h3>
+        <div class="example">
+            <pre><code>cout_start "Value: " cout_insrt 42 cout_end
+output("x = ", 13, true)</code></pre>
+        </div>
+        <h3>Input</h3>
+        <pre><code>#define cin_start std::cin >>
+#define cin_insrt >>
+#define cin_end   ;
+#define input(var, prefix, isEnable) \
+  if(isEnable){ std::cout << prefix; } \
+  std::cin >> var;</code></pre>
+        <h3>Example</h3>
+        <div class="example">
+            <pre><code>int age; input(age, "Enter age: ", true)</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="variables">
+        <h2>4. Variables</h2>
+        <p>Convenience macros for declarations.</p>
+        <pre><code>#define var(name, value)        auto name = value;
+#define str(name, value)        std::string name = value;
+#define string(name, value)     std::string name = value;
+#define int(name, value)        int name = value;
+#define integral(name, value)   int name = value;
+#define doub(name, value)       double name = value;
+#define double(name, value)     double name = value;
+#define f(name, value)          float name = value;
+#define float(name, value)      float name = value;
+#define char(name, value)       char name = value;
+#define character(name, value)  char name = value;
+#define bool(name, value)       bool name = value;
+#define boolean(name, value)    bool name = value;
+#define variable(T, name, val)  T name = val;
+#define VAR(T, name)            T name;</code></pre>
+        <h3>Examples</h3>
+        <div class="example">
+            <pre><code>str(title, "Andromeda")
+int(counter, 10)
+doub(pi, 3.14159)</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="functions-scripts">
+        <h2>5. Functions & Scripts</h2>
+        <pre><code>#define define(name, body)             void name(){ body };
+#define create(name)                   void name();
+#define define2(name, body, param)     void name(param){ body };
+#define run(fn)                        fn();
+#define run2(fn, arg)                  fn(arg);
+#define script(body)                   body;</code></pre>
+        <h3>Examples</h3>
+        <div class="example">
+            <pre><code>define(hello, print("Hello!"))
+run(hello)
+
+define2(square, print(x * x), int x)
+run2(square, 5)</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="pointers-memory">
+        <h2>6. Pointers & Memory</h2>
+        <pre><code>#define pointer(alias, var)    auto *alias = &var
+#define address(x)             &x
+#define data(ptr)              *ptr
+#define p(pptr)                **pptr
+#define deference(a, b)        a = *(b)
+#define pointerchange(a, b)    *a b</code></pre>
+        <h3>Example</h3>
+        <div class="example">
+            <pre><code>int x = 5; pointer(px, x); print(data(px)) // 5</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="control-flow">
+        <h2>7. Control Flow</h2>
+        <pre><code>#define index(i, code)        case i: code break;
+#define indexer(expr, cases)  switch(expr){ cases }
+#define loop(cond, body)      while(cond){ body }
+#define iftrue(cond, then)    if(cond){ then }
+#define iffalse(cond, then)   if(cond){ then } // identical to iftrue
+#define branch(cond, t, f)    if(cond){ t } else { f }</code></pre>
+        <h3>Example</h3>
+        <div class="example">
+            <pre><code>int which = 2;
+indexer(which,
+  index(1, print("one"))
+  index(2, print("two"))
+)</code></pre>
+        </div>
+    </div>
+
+    <div class="section" id="loops">
+        <h2>8. Loops</h2>
+        <pre><code>#define forplus(min, max, body)         for(int i = min; i <= max; i++){ body }
+#define forminus(max, min, body, out)   for(int i = max; i >= min; i--){ body if(out){ std::cout << i << std::endl; }}</code></pre>
+    </div>
+
+    <div class="section" id="math-helpers">
+        <h2>9. Math Helpers</h2>
+        <pre><code>#define add2(a,b)  ((a) + (b))
+#define add3(a,b,c) ((a) + (b) + (c))
+#define add4(a,b,c,d) ((a) + (b) + (c) + (d))
+#define sub2(a,b)  ((a) - (b))
+#define sub3(a,b,c) ((a) - (b) - (c))
+#define sub4(a,b,c,d) ((a) - (b) - (c) - (d))
+#define multi2(a,b) ((a) * (b))
+#define multi3(a,b,c) ((a) * (b) + (c))
+#define multi4(a,b,c,d) ((a) * (b) * (c) * (d))
+#define div2(a,b)   ((a) / (b))
+#define div3(a,b,c) ((a) / (b) + (c))
+#define div4(a,b,c,d) ((a) / (b) / (c) / (d))
+#define add(loops,a,b)   (loops * (a + b))
+#define sub(loops,a,b)   ((a) - (b) * (loops))
+#define multi(loops,a,b) ((a) * (b) * loops)
+#define div(loops,a,b)   ((a) / (b) * (loops))</code></pre>
+        <div class="note">
+            <p><strong>Note:</strong> <code>multi3</code>/<code>multi4</code> and <code>div3</code>/<code>div4</code> Math matrices only support up to 4!</p>
+        </div>
+    </div>
+
+    <div class="section" id="logic-gates">
+        <h2>10. Logic Gates</h2>
+        <pre><code>#define not(a,b)     ((b) = !(a))
+#define nor(a,b,c)   ((c) = !(a || b))
+#define and(a,b,c)   ((c) = (a && b))
+#define or(a,b,c)    ((c) = (a || b))
+#define nand(a,b,c)  ((c) = !(a && b))
+#define xor(a,b,c)   ((c) = (a ^ b))
+#define xnor(a,b,c)  ((c) = !(a ^ b))
+#define buffer(a,b)  ((b) = (a))</code></pre>
+    </div>
+
+    <div class="section" id="structs-classes-enums">
+        <h2>11. Structs, Classes, Enums</h2>
+        <pre><code>#define class(name, pub, priv) class name { public: pub private: priv; };
+#define struct(name, body)     struct name { body };
+#define enum(name, body)       enum name { body };
+#define enum2(name,a,b)        enum name { a, b };
+#define enum3(name,a,b,c)      enum name { a, b, c };
+#define enum4(name,a,b,c,d)    enum name { a, b, c, d };</code></pre>
+        <div class="note">
+            <p><strong>Note:</strong> Andromeda only supports enums of 10 max!</p>
+        </div>
+    </div>
+
+    <div class="section" id="namespaces">
+        <h2>12. Namespace Helpers</h2>
+        <pre><code>#define close(name, body)    namespace name { body }
+#define use(space, sym)      space::sym
+#define steal(ns, sym, val)  ns::sym = val
+#define nest(ns, sym, val)   ns::sym = auto val</code></pre>
+    </div>
+
+    <div class="section" id="vectors">
+        <h2>13. Vectors (simple int fields)</h2>
+        <pre><code>#define vector(x)            int x;
+#define vector2(x,y)         int x, y;
+#define vector3(x,y,z)       int x, y, z;
+#define vector4(x,y,z,t)     int x, y, z, t;</code></pre>
+    </div>
+
+    <div class="section" id="flags">
+        <h2>14. Flags</h2>
+        <pre><code>#define on true
+#define off false
+#define ON true
+#define OFF false
+#define ENABLE true
+#define DISABLE false
+#define enable true
+#define disable false
+#define ENABLED true
+#define DISABLED false
+#define enabled true
+#define disabled false</code></pre>
+        <div class="note">
+            <p><strong>Note:</strong> FLAGS are good for prototyping!</p>
+        </div>
+    </div>
+
+    <div class="section" id="misc">
+        <h2>15. Miscellaneous</h2>
+        <pre><code>#define container(x) x
+#define END ;
+#define NEXT ;
+#define end return 1;
+#define peek ;
+#define grabbing(x) x;
+#define program(x) x
+#define application(name, x) x
+#define main_program(name, x)     int main(){ x }
+#define main_application(name, x) int main(){ x }
+#define main_function(name, x)    int main(){ x }
+#define flipflop(x) x = !x;
+#define indexer(data, cases) switch(data){ cases }</code></pre>
+    </div>
+
+    <div class="section" id="notes-caveats">
+        <h2>Notes & Caveats</h2>
+        <div class="note">
+            <p>Macros are raw text substitutions—watch for side effects, precedence, and multiple evaluations.</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>Silica Software @2025</p>
+    </footer>
+</body>
+</html>
